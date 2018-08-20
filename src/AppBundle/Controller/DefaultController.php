@@ -7,6 +7,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use AppBundle\Services\Helpers;
+use AppBundle\Services\JwtAuth;
+
 use Symfony\Component\Validator\Constraints as Assert;
 
 class DefaultController extends Controller
@@ -40,6 +42,7 @@ class DefaultController extends Controller
 
             $email = (isset($params->email)) ? $params->email : null;
             $password = (isset($params->password)) ? $params->password : null;
+            $getHash = (isset($params->getHash)) ? $params->getHash : null;
 
             $emailConstraint = new Assert\Email();
             $emailConstraint->message = "This email is not valid";
@@ -47,10 +50,16 @@ class DefaultController extends Controller
 
             if ($email != null && count($validate_email) == 0 && $password != null) {
 
-                $data = array(
-                    'status' => 'success',
-                    'data' => 'Login success'
-                );
+                $jwt_auth = $this->get(JwtAuth::class);
+
+                if($getHash ==null || $getHash==false){
+                        $singup= $jwt_auth->singup($email,$password);
+
+                }else{
+                    $singup = $jwt_auth->singup($email,$password,true);
+                }
+
+               return $this->json($singup);
             } else {
                 $data = array(
                     'status' => 'error',
@@ -65,19 +74,34 @@ class DefaultController extends Controller
     }
     //fin login
 
-    public function pruebasAction()
+    public function pruebasAction(Request $request)
     {
-        $em = $this->getDoctrine()->getManager();
-        $userRepo = $em->getRepository('BackendBundle:User');
-        $users = $userRepo->findAll();
 
         $helpers = $this->get(Helpers::class);
-        return $helpers->json(array(
-            'status' => 'success',
-            'users' => $users[1]
+        $jwt_auth = $this->get(JwtAuth::class);
+        $token = $request->get("authorization",null);
 
-        ));
-        /*
+        if($token && $jwt_auth->checkToken($token) == true ){
+
+            $em = $this->getDoctrine()->getManager();
+            $userRepo = $em->getRepository('BackendBundle:User');
+            $users = $userRepo->findAll();
+            
+            return $helpers->json(array(
+                'status' => 'success',
+                'users' => $users
+                
+            ));
+        }else{
+                return $helpers->json(array(
+                    'status' => 'Error',
+                    'code' => 400,
+                    'data' => 'Authorization Error'
+                    
+                ));
+
+        }
+            /*
         die();
 
         return new JsonResponse(array
