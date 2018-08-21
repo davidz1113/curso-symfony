@@ -134,7 +134,6 @@ class UserController extends Controller {
                     //Cifrar la contraseña o password
                         $pwd = hash('sha256',$password);
                         $user->setPassword($pwd);
-                    
                 }
     
                 
